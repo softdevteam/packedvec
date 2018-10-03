@@ -1,6 +1,10 @@
 extern crate num;
 extern crate rand;
 
+#[cfg(feature = "serde")]
+#[macro_use]
+extern crate serde;
+
 use num::{Unsigned, ToPrimitive};
 use num::cast::{FromPrimitive};
 use std::cmp::Ord;
@@ -17,6 +21,7 @@ fn i_log2(number: u64) -> usize {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature="serde", derive(Serialize, Deserialize))]
 pub struct PackedVec<T> {
     len: usize,
     bits: Vec<u64>,

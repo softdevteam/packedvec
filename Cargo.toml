@@ -6,3 +6,4 @@ authors = ["Gabriela Alexandra Moldovan <gabi_250@live.com>"]
 [dependencies]
 num = "0.1.40"
 rand = "0.3"
+serde = { version="1.0", features=["derive"], optional=true }
