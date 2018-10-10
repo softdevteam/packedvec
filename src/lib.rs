@@ -10,14 +10,6 @@ use std::{cmp::Ord, marker::PhantomData};
 
 const WORD_SIZE: usize = 64;
 
-fn i_log2(number: u64) -> usize {
-    let mut bits = 63;
-    while number & (1 << bits) == 0 {
-        bits -= 1;
-    }
-    bits + 1
-}
-
 #[derive(Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct PackedVec<T> {
@@ -27,71 +19,10 @@ pub struct PackedVec<T> {
     phantom: PhantomData<T>,
 }
 
-#[derive(Debug)]
-pub struct PackedVecIter<'a, T>
-where
-    T: 'a + FromPrimitive + Ord + ToPrimitive + Unsigned,
-{
-    packed_vec: &'a PackedVec<T>,
-    idx: usize,
-}
-
-impl<'a, T> Iterator for PackedVecIter<'a, T>
-where
-    T: 'a + FromPrimitive + Ord + ToPrimitive + Unsigned,
-{
-    type Item = T;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        self.idx += 1;
-        self.packed_vec.get(self.idx - 1)
-    }
-}
-
 impl<'a, T> PackedVec<T>
 where
     T: FromPrimitive + Ord + ToPrimitive + Unsigned,
 {
-    /// Return the value at the specified `index`
-    /// # Example
-    /// ```
-    /// use packed_vec::PackedVec;
-    /// let v: Vec<u8> = vec![1, 2, 3, 4];
-    /// let packed_vec = PackedVec::new(v);
-    /// let val: Option<u8> = packed_vec.get(3);
-    /// assert_eq!(val, Some(4));
-    /// ```
-    pub fn get(&self, index: usize) -> Option<T> {
-        if index >= self.len {
-            return None;
-        }
-        let item_index = (index * self.item_width) / WORD_SIZE;
-        let start = (index * self.item_width) % WORD_SIZE;
-        if start + self.item_width < WORD_SIZE {
-            let mask = ((1 << self.item_width) - 1) << (WORD_SIZE - self.item_width - start);
-            let item = (self.bits[item_index].to_u64().unwrap() & mask)
-                >> (WORD_SIZE - self.item_width - start);
-            Some(FromPrimitive::from_u64(item).unwrap())
-        } else if self.item_width == WORD_SIZE {
-            Some(FromPrimitive::from_u64(self.bits[item_index].to_u64().unwrap()).unwrap())
-        } else {
-            let bits_written = WORD_SIZE - start;
-            let mask = ((1 << bits_written) - 1) << (WORD_SIZE - bits_written - start);
-            let first_half = (self.bits[item_index].to_u64().unwrap() & mask)
-                >> (WORD_SIZE - bits_written - start);
-            // second half
-            let remaining_bits = self.item_width - bits_written;
-            if remaining_bits > 0 {
-                let mask = ((1 << remaining_bits) - 1) << (WORD_SIZE - remaining_bits);
-                let second_half = (self.bits[item_index + 1].to_u64().unwrap() & mask)
-                    >> (WORD_SIZE - remaining_bits);
-                Some(FromPrimitive::from_u64((first_half << remaining_bits) + second_half).unwrap())
-            } else {
-                Some(FromPrimitive::from_u64(first_half).unwrap())
-            }
-        }
-    }
-
     /// Return a `PackedVec` containing a compressed version of the elements of
     /// `vec`.
     pub fn new(vec: Vec<T>) -> PackedVec<T> {
@@ -148,6 +79,46 @@ where
         }
     }
 
+    /// Return the value at the specified `index`
+    /// # Example
+    /// ```
+    /// use packed_vec::PackedVec;
+    /// let v: Vec<u8> = vec![1, 2, 3, 4];
+    /// let packed_vec = PackedVec::new(v);
+    /// let val: Option<u8> = packed_vec.get(3);
+    /// assert_eq!(val, Some(4));
+    /// ```
+    pub fn get(&self, index: usize) -> Option<T> {
+        if index >= self.len {
+            return None;
+        }
+        let item_index = (index * self.item_width) / WORD_SIZE;
+        let start = (index * self.item_width) % WORD_SIZE;
+        if start + self.item_width < WORD_SIZE {
+            let mask = ((1 << self.item_width) - 1) << (WORD_SIZE - self.item_width - start);
+            let item = (self.bits[item_index].to_u64().unwrap() & mask)
+                >> (WORD_SIZE - self.item_width - start);
+            Some(FromPrimitive::from_u64(item).unwrap())
+        } else if self.item_width == WORD_SIZE {
+            Some(FromPrimitive::from_u64(self.bits[item_index].to_u64().unwrap()).unwrap())
+        } else {
+            let bits_written = WORD_SIZE - start;
+            let mask = ((1 << bits_written) - 1) << (WORD_SIZE - bits_written - start);
+            let first_half = (self.bits[item_index].to_u64().unwrap() & mask)
+                >> (WORD_SIZE - bits_written - start);
+            // second half
+            let remaining_bits = self.item_width - bits_written;
+            if remaining_bits > 0 {
+                let mask = ((1 << remaining_bits) - 1) << (WORD_SIZE - remaining_bits);
+                let second_half = (self.bits[item_index + 1].to_u64().unwrap() & mask)
+                    >> (WORD_SIZE - remaining_bits);
+                Some(FromPrimitive::from_u64((first_half << remaining_bits) + second_half).unwrap())
+            } else {
+                Some(FromPrimitive::from_u64(first_half).unwrap())
+            }
+        }
+    }
+
     /// Return the number of elements in this.
     /// # Example
     /// ```
@@ -167,6 +138,35 @@ where
             idx: 0,
         }
     }
+}
+
+#[derive(Debug)]
+pub struct PackedVecIter<'a, T>
+where
+    T: 'a + FromPrimitive + Ord + ToPrimitive + Unsigned,
+{
+    packed_vec: &'a PackedVec<T>,
+    idx: usize,
+}
+
+impl<'a, T> Iterator for PackedVecIter<'a, T>
+where
+    T: 'a + FromPrimitive + Ord + ToPrimitive + Unsigned,
+{
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.idx += 1;
+        self.packed_vec.get(self.idx - 1)
+    }
+}
+
+fn i_log2(number: u64) -> usize {
+    let mut bits = 63;
+    while number & (1 << bits) == 0 {
+        bits -= 1;
+    }
+    bits + 1
 }
 
 #[cfg(test)]
