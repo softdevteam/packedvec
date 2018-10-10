@@ -1,78 +1,94 @@
-extern crate num;
+extern crate num_traits;
 extern crate rand;
 
 #[cfg(feature = "serde")]
 #[macro_use]
 extern crate serde;
 
-use num::{cast::FromPrimitive, ToPrimitive, Unsigned};
-use std::{cmp::Ord, marker::PhantomData};
-
-const WORD_SIZE: usize = 64;
+use num_traits::{cast::FromPrimitive, AsPrimitive, PrimInt, ToPrimitive, Unsigned};
+use std::{cmp::Ord, marker::PhantomData, mem::size_of};
 
 #[derive(Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct PackedVec<T> {
+pub struct PackedVec<T, StorageT = usize> {
     len: usize,
-    bits: Vec<u64>,
+    bits: Vec<StorageT>,
     item_width: usize,
     phantom: PhantomData<T>,
 }
 
-impl<'a, T> PackedVec<T>
+impl<'a, T> PackedVec<T, usize>
 where
-    T: FromPrimitive + Ord + ToPrimitive + Unsigned,
+    T: 'static + AsPrimitive<usize> + FromPrimitive + Ord + PrimInt + ToPrimitive + Unsigned,
+    usize: AsPrimitive<T>,
 {
-    /// Return a `PackedVec` containing a compressed version of the elements of
-    /// `vec`.
-    pub fn new(vec: Vec<T>) -> PackedVec<T> {
-        let len = vec.len();
-        let item_width = if let Some(v) = vec.iter().max() {
-            i_log2((*v).to_u64().unwrap())
-        } else {
+    /// Constructs a new `PackedVec` from `vec`. The `PackedVec` has `usize` backing storage, which
+    /// is likely to be the best choice in nearly all situations.
+    pub fn new(vec: Vec<T>) -> Self {
+        PackedVec::new_with_storaget(vec)
+    }
+}
+
+impl<'a, T, StorageT> PackedVec<T, StorageT>
+where
+    T: 'static + AsPrimitive<StorageT> + FromPrimitive + Ord + PrimInt + ToPrimitive + Unsigned,
+    StorageT: AsPrimitive<T> + PrimInt + Unsigned,
+{
+    /// Constructs a new `PackedVec` from `vec` (with a user-defined backing storage type).
+    pub fn new_with_storaget(vec: Vec<T>) -> PackedVec<T, StorageT> {
+        if size_of::<T>() > size_of::<StorageT>() {
+            panic!("The backing storage type must be the same size or bigger as the stored integer size.");
+        }
+        let m = vec.iter().max();
+        // If the input vector was empty, or if it consisted entirely of zeros, we don't need to
+        // fill the backing storage with anything.
+        if m.is_none() || *m.unwrap() == T::zero() {
             return PackedVec {
-                len: 0,
+                len: vec.len(),
                 bits: vec![],
                 item_width: 0,
                 phantom: PhantomData,
             };
         };
+
+        let item_width = i_log2(*m.unwrap());
         let mut bit_vec = vec![];
-        let mut buf: u64 = 0;
+        let mut buf = StorageT::zero();
         let mut bit_count: usize = 0;
-        for ref item in vec.iter() {
-            let item = item.to_u64().unwrap();
-            if bit_count + item_width < WORD_SIZE {
-                let shifted_item = item << WORD_SIZE - (item_width + bit_count);
-                buf |= shifted_item;
+        for item in &vec {
+            let item: StorageT = (*item).as_();
+            if bit_count + item_width < num_bits::<StorageT>() {
+                let shifted_item = item << num_bits::<StorageT>() - (item_width + bit_count);
+                buf = buf | shifted_item;
                 bit_count += item_width;
             } else {
-                let remaining_bits = WORD_SIZE - bit_count;
+                let remaining_bits = num_bits::<StorageT>() - bit_count;
                 // add as many bits as possible before adding the remaining
                 // bits to the next u64
                 let first_half = item >> (item_width - remaining_bits);
                 // for example if width = 5 and remaining_bits = 3
                 // item = 00101 -> add 001 to the buffer, insert buffer into
                 // bit array and create a new buffer containing 01 00000000...
-                buf |= first_half;
+                buf = buf | first_half;
                 bit_vec.push(buf);
-                buf = 0;
+                buf = StorageT::zero();
                 bit_count = 0;
                 if item_width - remaining_bits > 0 {
-                    let mask = (1 << (item_width - remaining_bits)) - 1;
+                    let mask = (StorageT::one() << (item_width - remaining_bits)) - StorageT::one();
                     let mut second_half = item & mask;
                     bit_count += item_width - remaining_bits;
                     // add the second half of the number to the buffer
-                    second_half <<= WORD_SIZE - bit_count;
-                    buf |= second_half;
+                    second_half = second_half << num_bits::<StorageT>() - bit_count;
+                    buf = buf | second_half;
                 }
             }
         }
-        if buf != 0 {
+        if buf != StorageT::zero() {
             bit_vec.push(buf);
         }
+
         PackedVec {
-            len,
+            len: vec.len(),
             bits: bit_vec,
             item_width,
             phantom: PhantomData,
@@ -92,29 +108,37 @@ where
         if index >= self.len {
             return None;
         }
-        let item_index = (index * self.item_width) / WORD_SIZE;
-        let start = (index * self.item_width) % WORD_SIZE;
-        if start + self.item_width < WORD_SIZE {
-            let mask = ((1 << self.item_width) - 1) << (WORD_SIZE - self.item_width - start);
-            let item = (self.bits[item_index].to_u64().unwrap() & mask)
-                >> (WORD_SIZE - self.item_width - start);
-            Some(FromPrimitive::from_u64(item).unwrap())
-        } else if self.item_width == WORD_SIZE {
-            Some(FromPrimitive::from_u64(self.bits[item_index].to_u64().unwrap()).unwrap())
+        if self.item_width == 0 {
+            // The original vector consisted entirely of zeros.
+            return Some(T::zero());
+        }
+
+        let item_index = (index * self.item_width) / num_bits::<StorageT>();
+        let start = (index * self.item_width) % num_bits::<StorageT>();
+        if start + self.item_width < num_bits::<StorageT>() {
+            let mask = ((StorageT::one() << self.item_width) - StorageT::one())
+                << (num_bits::<StorageT>() - self.item_width - start);
+            let item = (self.bits[item_index] & mask)
+                >> (num_bits::<StorageT>() - self.item_width - start);
+            Some(item.as_())
+        } else if self.item_width == num_bits::<StorageT>() {
+            Some(self.bits[item_index].as_())
         } else {
-            let bits_written = WORD_SIZE - start;
-            let mask = ((1 << bits_written) - 1) << (WORD_SIZE - bits_written - start);
-            let first_half = (self.bits[item_index].to_u64().unwrap() & mask)
-                >> (WORD_SIZE - bits_written - start);
+            let bits_written = num_bits::<StorageT>() - start;
+            let mask = ((StorageT::one() << bits_written) - StorageT::one())
+                << (num_bits::<StorageT>() - bits_written - start);
+            let first_half =
+                (self.bits[item_index] & mask) >> (num_bits::<StorageT>() - bits_written - start);
             // second half
             let remaining_bits = self.item_width - bits_written;
             if remaining_bits > 0 {
-                let mask = ((1 << remaining_bits) - 1) << (WORD_SIZE - remaining_bits);
-                let second_half = (self.bits[item_index + 1].to_u64().unwrap() & mask)
-                    >> (WORD_SIZE - remaining_bits);
-                Some(FromPrimitive::from_u64((first_half << remaining_bits) + second_half).unwrap())
+                let mask = ((StorageT::one() << remaining_bits) - StorageT::one())
+                    << (num_bits::<StorageT>() - remaining_bits);
+                let second_half =
+                    (self.bits[item_index + 1] & mask) >> (num_bits::<StorageT>() - remaining_bits);
+                Some(((first_half << remaining_bits) + second_half).as_())
             } else {
-                Some(FromPrimitive::from_u64(first_half).unwrap())
+                Some(first_half.as_())
             }
         }
     }
@@ -132,26 +156,24 @@ where
     }
 
     /// An iterator over the elements of the vector.
-    pub fn iter(&'a self) -> PackedVecIter<'a, T> {
+    pub fn iter(&'a self) -> PackedVecIter<'a, T, StorageT> {
         PackedVecIter {
-            packed_vec: &self,
+            packed_vec: self,
             idx: 0,
         }
     }
 }
 
 #[derive(Debug)]
-pub struct PackedVecIter<'a, T>
-where
-    T: 'a + FromPrimitive + Ord + ToPrimitive + Unsigned,
-{
-    packed_vec: &'a PackedVec<T>,
+pub struct PackedVecIter<'a, T: 'a, StorageT: 'a> {
+    packed_vec: &'a PackedVec<T, StorageT>,
     idx: usize,
 }
 
-impl<'a, T> Iterator for PackedVecIter<'a, T>
+impl<'a, T, StorageT> Iterator for PackedVecIter<'a, T, StorageT>
 where
-    T: 'a + FromPrimitive + Ord + ToPrimitive + Unsigned,
+    T: 'static + AsPrimitive<StorageT> + FromPrimitive + Ord + PrimInt + ToPrimitive + Unsigned,
+    StorageT: AsPrimitive<T> + PrimInt + Unsigned,
 {
     type Item = T;
 
@@ -161,9 +183,15 @@ where
     }
 }
 
-fn i_log2(number: u64) -> usize {
-    let mut bits = 63;
-    while number & (1 << bits) == 0 {
+/// How many bits does this type represent?
+fn num_bits<T>() -> usize {
+    size_of::<T>() * 8
+}
+
+fn i_log2<T: PrimInt + Unsigned>(n: T) -> usize {
+    debug_assert!(n > T::zero());
+    let mut bits = num_bits::<T>() - 1;
+    while n & (T::one() << bits) == T::zero() {
         bits -= 1;
     }
     bits + 1
@@ -172,7 +200,7 @@ fn i_log2(number: u64) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand;
+    use rand::Rand;
 
     #[test]
     fn empty_vec() {
@@ -226,7 +254,7 @@ mod tests {
 
     #[test]
     fn values_fill_item_width() {
-        let v: Vec<u64> = vec![1, 2, 9223372036854775808, 100, 0, 3];
+        let v: Vec<usize> = vec![1, 2, 9223372036854775808, 100, 0, 3];
         let v_len = v.len();
         let packed_v = PackedVec::new(v.clone());
         assert_eq!(packed_v.len(), v_len);
@@ -302,25 +330,55 @@ mod tests {
         assert_eq!(iter.next(), None);
     }
 
-    fn random_unsigned_ints<T>()
+    fn random_unsigned_ints<T, StorageT>()
     where
-        T: Unsigned + ToPrimitive + FromPrimitive + Ord + Clone + std::fmt::Debug + rand::Rand,
+        T: 'static
+            + AsPrimitive<StorageT>
+            + FromPrimitive
+            + Ord
+            + PrimInt
+            + Rand
+            + ToPrimitive
+            + Unsigned,
+        StorageT: AsPrimitive<T> + PrimInt + Unsigned,
     {
         const LENGTH: usize = 100000;
         let mut v: Vec<T> = Vec::with_capacity(LENGTH);
         for _ in 0..(LENGTH + 1) {
             v.push(rand::random::<T>());
         }
-        let packed_v = PackedVec::new(v.clone());
+        let packed_v = PackedVec::<T, StorageT>::new_with_storaget(v.clone());
         assert_eq!(packed_v.len(), v.len());
         assert!(packed_v.iter().zip(v.iter()).all(|(x, y)| x == *y));
     }
 
     #[test]
     fn random_vec() {
-        random_unsigned_ints::<u8>();
-        random_unsigned_ints::<u16>();
-        random_unsigned_ints::<u32>();
-        random_unsigned_ints::<u64>();
+        random_unsigned_ints::<u8, u8>();
+        random_unsigned_ints::<u8, u16>();
+        random_unsigned_ints::<u8, u32>();
+        random_unsigned_ints::<u8, u64>();
+        random_unsigned_ints::<u16, u16>();
+        random_unsigned_ints::<u16, u32>();
+        random_unsigned_ints::<u16, u64>();
+        random_unsigned_ints::<u32, u32>();
+        random_unsigned_ints::<u32, u64>();
+        random_unsigned_ints::<u64, u64>();
+    }
+
+    #[test]
+    #[should_panic]
+    fn t_must_not_be_bigger_than_storaget() {
+        PackedVec::<u16, u8>::new_with_storaget(vec![0]);
+    }
+
+    #[test]
+    fn vecs_with_only_zeros() {
+        let pv = PackedVec::new(vec![0u16, 0u16]);
+        assert_eq!(pv.bits.len(), 0);
+        assert_eq!(pv.get(0), Some(0));
+        assert_eq!(pv.get(1), Some(0));
+        assert_eq!(pv.get(2), None);
+        assert_eq!(pv.iter().collect::<Vec<u16>>(), vec![0, 0]);
     }
 }
