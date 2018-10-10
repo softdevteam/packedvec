@@ -83,7 +83,7 @@ where
                 }
             }
         }
-        if buf != StorageT::zero() {
+        if bit_count != 0 {
             bit_vec.push(buf);
         }
 
@@ -380,5 +380,19 @@ mod tests {
         assert_eq!(pv.get(1), Some(0));
         assert_eq!(pv.get(2), None);
         assert_eq!(pv.iter().collect::<Vec<u16>>(), vec![0, 0]);
+    }
+
+    #[test]
+    fn zero_bits_spanning_across_elements() {
+        let v: Vec<u64> = vec![0, 5, 17, 17, 6, 3, 25, 29, 10, 0, 10, 0, 2];
+        let v_len = v.len();
+        let pv = PackedVec::new(v.clone());
+        assert_eq!(pv.len(), v_len);
+        let mut iter = pv.iter();
+        for number in v {
+            let value: Option<u64> = iter.next();
+            assert_eq!(value, Some(number));
+        }
+        assert_eq!(iter.next(), None);
     }
 }
