@@ -39,16 +39,19 @@ where
         if size_of::<T>() > size_of::<StorageT>() {
             panic!("The backing storage type must be the same size or bigger as the stored integer size.");
         }
-        if vec.len() == 0 {
+        let m = vec.iter().max();
+        // If the input vector was empty, or if it consisted entirely of zeros, we don't need to
+        // fill the backing storage with anything.
+        if m.is_none() || *m.unwrap() == T::zero() {
             return PackedVec {
-                len: 0,
+                len: vec.len(),
                 bits: vec![],
                 item_width: 0,
                 phantom: PhantomData,
             };
-        }
+        };
 
-        let item_width = i_log2(*vec.iter().max().unwrap());
+        let item_width = i_log2(*m.unwrap());
         let mut bit_vec = vec![];
         let mut buf = StorageT::zero();
         let mut bit_count: usize = 0;
@@ -105,6 +108,11 @@ where
         if index >= self.len {
             return None;
         }
+        if self.item_width == 0 {
+            // The original vector consisted entirely of zeros.
+            return Some(T::zero());
+        }
+
         let item_index = (index * self.item_width) / num_bits::<StorageT>();
         let start = (index * self.item_width) % num_bits::<StorageT>();
         if start + self.item_width < num_bits::<StorageT>() {
@@ -180,9 +188,10 @@ fn num_bits<T>() -> usize {
     size_of::<T>() * 8
 }
 
-fn i_log2<T: PrimInt>(number: T) -> usize {
+fn i_log2<T: PrimInt + Unsigned>(n: T) -> usize {
+    debug_assert!(n > T::zero());
     let mut bits = num_bits::<T>() - 1;
-    while number & (T::one() << bits) == T::zero() {
+    while n & (T::one() << bits) == T::zero() {
         bits -= 1;
     }
     bits + 1
@@ -361,5 +370,15 @@ mod tests {
     #[should_panic]
     fn t_must_not_be_bigger_than_storaget() {
         PackedVec::<u16, u8>::new_with_storaget(vec![0]);
+    }
+
+    #[test]
+    fn vecs_with_only_zeros() {
+        let pv = PackedVec::new(vec![0u16, 0u16]);
+        assert_eq!(pv.bits.len(), 0);
+        assert_eq!(pv.get(0), Some(0));
+        assert_eq!(pv.get(1), Some(0));
+        assert_eq!(pv.get(2), None);
+        assert_eq!(pv.iter().collect::<Vec<u16>>(), vec![0, 0]);
     }
 }
