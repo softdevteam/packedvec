@@ -30,7 +30,7 @@ pub struct PackedVec<T> {
 #[derive(Debug)]
 pub struct PackedVecIter<'a, T>
 where
-    T: 'a + Unsigned + ToPrimitive + Ord + FromPrimitive,
+    T: 'a + FromPrimitive + Ord + ToPrimitive + Unsigned,
 {
     packed_vec: &'a PackedVec<T>,
     idx: usize,
@@ -38,7 +38,7 @@ where
 
 impl<'a, T> Iterator for PackedVecIter<'a, T>
 where
-    T: 'a + Unsigned + ToPrimitive + FromPrimitive + Ord,
+    T: 'a + FromPrimitive + Ord + ToPrimitive + Unsigned,
 {
     type Item = T;
 
@@ -50,7 +50,7 @@ where
 
 impl<'a, T> PackedVec<T>
 where
-    T: Unsigned + ToPrimitive + FromPrimitive + Ord,
+    T: FromPrimitive + Ord + ToPrimitive + Unsigned,
 {
     /// Return the value at the specified `index`
     /// # Example
