@@ -23,7 +23,7 @@ use std::{cmp::Ord, marker::PhantomData, mem::size_of};
 pub struct PackedVec<T, StorageT = usize> {
     len: usize,
     bits: Vec<StorageT>,
-    item_width: usize,
+    bwidth: usize,
     phantom: PhantomData<T>,
 }
 
@@ -56,26 +56,26 @@ where
             return PackedVec {
                 len: vec.len(),
                 bits: vec![],
-                item_width: 0,
+                bwidth: 0,
                 phantom: PhantomData,
             };
         };
 
-        let item_width = i_log2(*m.unwrap());
+        let bwidth = i_log2(*m.unwrap());
         let mut bit_vec = vec![];
         let mut buf = StorageT::zero();
         let mut bit_count: usize = 0;
         for item in &vec {
             let item: StorageT = (*item).as_();
-            if bit_count + item_width < num_bits::<StorageT>() {
-                let shifted_item = item << num_bits::<StorageT>() - (item_width + bit_count);
+            if bit_count + bwidth < num_bits::<StorageT>() {
+                let shifted_item = item << num_bits::<StorageT>() - (bwidth + bit_count);
                 buf = buf | shifted_item;
-                bit_count += item_width;
+                bit_count += bwidth;
             } else {
                 let remaining_bits = num_bits::<StorageT>() - bit_count;
                 // add as many bits as possible before adding the remaining
                 // bits to the next u64
-                let first_half = item >> (item_width - remaining_bits);
+                let first_half = item >> (bwidth - remaining_bits);
                 // for example if width = 5 and remaining_bits = 3
                 // item = 00101 -> add 001 to the buffer, insert buffer into
                 // bit array and create a new buffer containing 01 00000000...
@@ -83,10 +83,10 @@ where
                 bit_vec.push(buf);
                 buf = StorageT::zero();
                 bit_count = 0;
-                if item_width - remaining_bits > 0 {
-                    let mask = (StorageT::one() << (item_width - remaining_bits)) - StorageT::one();
+                if bwidth - remaining_bits > 0 {
+                    let mask = (StorageT::one() << (bwidth - remaining_bits)) - StorageT::one();
                     let mut second_half = item & mask;
-                    bit_count += item_width - remaining_bits;
+                    bit_count += bwidth - remaining_bits;
                     // add the second half of the number to the buffer
                     second_half = second_half << num_bits::<StorageT>() - bit_count;
                     buf = buf | second_half;
@@ -100,7 +100,7 @@ where
         PackedVec {
             len: vec.len(),
             bits: bit_vec,
-            item_width,
+            bwidth,
             phantom: PhantomData,
         }
     }
@@ -118,20 +118,20 @@ where
         if index >= self.len {
             return None;
         }
-        if self.item_width == 0 {
+        if self.bwidth == 0 {
             // The original vector consisted entirely of zeros.
             return Some(T::zero());
         }
 
-        let item_index = (index * self.item_width) / num_bits::<StorageT>();
-        let start = (index * self.item_width) % num_bits::<StorageT>();
-        if start + self.item_width < num_bits::<StorageT>() {
-            let mask = ((StorageT::one() << self.item_width) - StorageT::one())
-                << (num_bits::<StorageT>() - self.item_width - start);
+        let item_index = (index * self.bwidth) / num_bits::<StorageT>();
+        let start = (index * self.bwidth) % num_bits::<StorageT>();
+        if start + self.bwidth < num_bits::<StorageT>() {
+            let mask = ((StorageT::one() << self.bwidth) - StorageT::one())
+                << (num_bits::<StorageT>() - self.bwidth - start);
             let item = (self.bits[item_index] & mask)
-                >> (num_bits::<StorageT>() - self.item_width - start);
+                >> (num_bits::<StorageT>() - self.bwidth - start);
             Some(item.as_())
-        } else if self.item_width == num_bits::<StorageT>() {
+        } else if self.bwidth == num_bits::<StorageT>() {
             Some(self.bits[item_index].as_())
         } else {
             let bits_written = num_bits::<StorageT>() - start;
@@ -140,7 +140,7 @@ where
             let first_half =
                 (self.bits[item_index] & mask) >> (num_bits::<StorageT>() - bits_written - start);
             // second half
-            let remaining_bits = self.item_width - bits_written;
+            let remaining_bits = self.bwidth - bits_written;
             if remaining_bits > 0 {
                 let mask = ((StorageT::one() << remaining_bits) - StorageT::one())
                     << (num_bits::<StorageT>() - remaining_bits);
@@ -217,7 +217,7 @@ mod tests {
         let v: Vec<u16> = vec![];
         let packed_v = PackedVec::new(v);
         assert_eq!(packed_v.len(), 0);
-        assert_eq!(packed_v.item_width, 0);
+        assert_eq!(packed_v.bwidth, 0);
         assert_eq!(packed_v.bits, vec![]);
         let mut iter = packed_v.iter();
         assert_eq!(iter.idx, 0);
@@ -230,7 +230,7 @@ mod tests {
         let v_len = v.len();
         let packed_v = PackedVec::new(v.clone());
         assert_eq!(packed_v.len(), v_len);
-        assert_eq!(packed_v.item_width, 2);
+        assert_eq!(packed_v.bwidth, 2);
         assert_eq!(packed_v.bits, vec![7782220156096217088]);
         let mut iter = packed_v.iter();
         for number in v {
@@ -245,7 +245,7 @@ mod tests {
         let v_len = v.len();
         let packed_v = PackedVec::new(v.clone());
         assert_eq!(packed_v.len(), v_len);
-        assert_eq!(packed_v.item_width, 33);
+        assert_eq!(packed_v.bwidth, 33);
         assert_eq!(
             packed_v.bits,
             vec![
@@ -263,12 +263,12 @@ mod tests {
     }
 
     #[test]
-    fn values_fill_item_width() {
+    fn values_fill_bwidth() {
         let v: Vec<usize> = vec![1, 2, 9223372036854775808, 100, 0, 3];
         let v_len = v.len();
         let packed_v = PackedVec::new(v.clone());
         assert_eq!(packed_v.len(), v_len);
-        assert_eq!(packed_v.item_width, 64);
+        assert_eq!(packed_v.bwidth, 64);
         assert_eq!(packed_v.bits, v);
         let mut iter = packed_v.iter();
         for number in v {
