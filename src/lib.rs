@@ -199,12 +199,7 @@ fn num_bits<T>() -> usize {
 }
 
 fn i_log2<T: PrimInt + Unsigned>(n: T) -> usize {
-    debug_assert!(n > T::zero());
-    let mut bits = num_bits::<T>() - 1;
-    while n & (T::one() << bits) == T::zero() {
-        bits -= 1;
-    }
-    bits + 1
+    size_of::<T>() * 8 - n.leading_zeros() as usize
 }
 
 #[cfg(test)]
