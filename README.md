@@ -11,7 +11,7 @@ of `u*` values. This is achieved by storing multiple elements inside a single
 `u*` value.
 
 ```
-    use packed_vec::PackedVec;
+    use packedvec::PackedVec;
 
     let v = vec![1, 4294967296, 2, 3, 4294967296, 5];
     let mut small_vec = PackedVec::new(v);
