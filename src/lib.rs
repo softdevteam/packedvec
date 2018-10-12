@@ -8,6 +8,12 @@
 // at your option. This file may not be copied, modified, or distributed except according to those
 // terms.
 
+//! A `PackedVec` is a vector of integers which, when possible, compresses the internal
+//! representation while maintaining a consistent outward API.
+//!
+//! The main documentation for this crate can be found in the [`PackedVec`](struct.PackedVec.html)
+//! struct.
+
 extern crate num_traits;
 extern crate rand;
 
@@ -18,6 +24,36 @@ extern crate serde;
 use num_traits::{cast::FromPrimitive, AsPrimitive, PrimInt, ToPrimitive, Unsigned};
 use std::{cmp::Ord, mem::size_of};
 
+/// A [`PackedVec`](struct.PackedVec.html) is a vector of integers which, when possible, compresses
+/// the internal representation while maintaining a consistent outward API. For example, if we have
+/// a `Vec<u64>` with elements [20, 30, 140], every element wastes most of its 64 bits: 7 bits is
+/// sufficient to represent the range of elements in the vector. Given this input vector,
+/// `PackedVec` stores each elements using exactly 7 bits, saving substantial memory. For vectors
+/// which often contain small ranges of numbers, and which are created rarely, but read from
+/// frequently, this can be a significant memory and performance win.
+///
+/// # Examples
+///
+/// `PackedVec` has two main API differences from `Vec`: a `PackedVec` is created from a `Vec`; and
+/// a `PackedVec` returns values rather than references. Both points can be seen in this example:
+///
+/// ```rust
+/// use packedvec::PackedVec;
+/// let v = vec![-1, 30, 120];
+/// let pv = PackedVec::new(v.clone());
+/// assert_eq!(pv.get(0), Some(-1));
+/// assert_eq!(pv.get(2), Some(120));
+/// assert_eq!(pv.get(3), None);
+/// assert_eq!(v.iter().cloned().collect::<Vec<_>>(), pv.iter().collect::<Vec<_>>());
+/// ```
+///
+/// ## Storage backing type
+///
+/// `PackedVec` defaults to using `usize` as a storage backing type. You can choose your own
+/// storage type with the [`new_with_storaget()`](struct.PackedVec.html#method.new_with_storaget)
+/// constructor. In general we recommend using the default `usize` backing storage unless you have
+/// rigorously benchmarked your particular use case and are sure that a different storage type is
+/// superior.
 #[derive(Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct PackedVec<T, StorageT = usize> {
@@ -127,7 +163,8 @@ where
         }
     }
 
-    /// Return the value at the specified `index`
+    /// Return the value at the specified `index`.
+    ///
     /// # Example
     /// ```
     /// use packedvec::PackedVec;
@@ -176,7 +213,8 @@ where
         }
     }
 
-    /// Return the number of elements in this.
+    /// Return the number of elements in this `PackedVec`.
+    ///
     /// # Example
     /// ```
     /// use packedvec::PackedVec;
@@ -188,7 +226,7 @@ where
         self.len
     }
 
-    /// An iterator over the elements of the vector.
+    /// Returns an iterator over the `PackedVec`.
     pub fn iter(&'a self) -> PackedVecIter<'a, T, StorageT> {
         PackedVecIter {
             packedvec: self,
