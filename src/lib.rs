@@ -130,10 +130,10 @@ where
     /// Return the value at the specified `index`
     /// # Example
     /// ```
-    /// use packed_vec::PackedVec;
+    /// use packedvec::PackedVec;
     /// let v: Vec<u8> = vec![1, 2, 3, 4];
-    /// let packed_vec = PackedVec::new(v);
-    /// let val: Option<u8> = packed_vec.get(3);
+    /// let packedvec = PackedVec::new(v);
+    /// let val: Option<u8> = packedvec.get(3);
     /// assert_eq!(val, Some(4));
     /// ```
     pub fn get(&self, index: usize) -> Option<T> {
@@ -179,10 +179,10 @@ where
     /// Return the number of elements in this.
     /// # Example
     /// ```
-    /// use packed_vec::PackedVec;
+    /// use packedvec::PackedVec;
     /// let v: Vec<u16> = vec![1, 2, 3, 4];
-    /// let packed_vec = PackedVec::new(v);
-    /// assert_eq!(packed_vec.len(), 4);
+    /// let packedvec = PackedVec::new(v);
+    /// assert_eq!(packedvec.len(), 4);
     /// ```
     pub fn len(&self) -> usize {
         self.len
@@ -191,7 +191,7 @@ where
     /// An iterator over the elements of the vector.
     pub fn iter(&'a self) -> PackedVecIter<'a, T, StorageT> {
         PackedVecIter {
-            packed_vec: self,
+            packedvec: self,
             idx: 0,
         }
     }
@@ -199,7 +199,7 @@ where
 
 #[derive(Debug)]
 pub struct PackedVecIter<'a, T: 'a, StorageT: 'a> {
-    packed_vec: &'a PackedVec<T, StorageT>,
+    packedvec: &'a PackedVec<T, StorageT>,
     idx: usize,
 }
 
@@ -212,7 +212,7 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         self.idx += 1;
-        self.packed_vec.get(self.idx - 1)
+        self.packedvec.get(self.idx - 1)
     }
 }
 

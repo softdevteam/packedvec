@@ -1,5 +1,5 @@
 [package]
-name = "packed_vec"
+name = "packedvec"
 version = "0.1.0"
 authors = ["Gabriela Alexandra Moldovan <gabi_250@live.com>"]
 readme = "README.md"

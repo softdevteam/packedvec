@@ -9,11 +9,11 @@
 
 #![feature(test)]
 
-extern crate packed_vec;
+extern crate packedvec;
 extern crate rand;
 extern crate test;
 
-use packed_vec::*;
+use packedvec::*;
 use test::Bencher;
 
 #[bench]
