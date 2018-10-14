@@ -8,8 +8,8 @@
 // at your option. This file may not be copied, modified, or distributed except according to those
 // terms.
 
-//! A `PackedVec` is a vector of integers which, when possible, compresses the internal
-//! representation while maintaining a consistent outward API.
+//! A [`PackedVec`](struct.PackedVec.html) stores vectors of integers efficiently while providing
+//! a API similar to `Vec`.
 //!
 //! The main documentation for this crate can be found in the [`PackedVec`](struct.PackedVec.html)
 //! struct.
@@ -24,13 +24,14 @@ extern crate serde;
 use num_traits::{cast::FromPrimitive, AsPrimitive, PrimInt, ToPrimitive, Unsigned};
 use std::{cmp::Ord, mem::size_of};
 
-/// A [`PackedVec`](struct.PackedVec.html) is a vector of integers which, when possible, compresses
-/// the internal representation while maintaining a consistent outward API. For example, if we have
-/// a `Vec<u64>` with elements [20, 30, 140], every element wastes most of its 64 bits: 7 bits is
-/// sufficient to represent the range of elements in the vector. Given this input vector,
-/// `PackedVec` stores each elements using exactly 7 bits, saving substantial memory. For vectors
-/// which often contain small ranges of numbers, and which are created rarely, but read from
-/// frequently, this can be a significant memory and performance win.
+/// A [`PackedVec`](struct.PackedVec.html) stores vectors of integers efficiently while providing
+/// an API similar to `Vec`. The basic idea is to store each element using the minimum number of
+/// bits needed to represent every element in the `Vec`. For example, if we have a `Vec<u64>` with
+/// elements [20, 30, 140], every element wastes most of its 64 bits: 7 bits is sufficient to
+/// represent the range of elements in the vector. Given this input vector, `PackedVec` stores each
+/// elements using exactly 7 bits, saving substantial memory. For vectors which often contain small
+/// ranges of numbers, and which are created rarely, but read from frequently, this can be a
+/// significant memory and performance win.
 ///
 /// # Examples
 ///
