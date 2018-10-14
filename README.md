@@ -1,20 +1,28 @@
-# Smaller immutable `Vec<u*>`s
-This library provides a more efficient way of storing immutable
-lists of unsigned integer values.
+# PackedVec
 
-A `PackedVec` is a `struct` that stores the elements of a given `Vec<u64>` as
-a series of`N` bit values, where `N` is the number of bits needed to represent
-the largest number from the original list.
+A [`PackedVec`](https://docs.rs/packedvec/) stores vectors of integers
+efficiently while providing an API similar to `Vec`. The basic idea is to store
+each element using the minimum number of bits needed to represent every element
+in the `Vec`. For example, if we have a `Vec<u64>` with elements [20, 30, 140],
+every element wastes most of its 64 bits: 7 bits is sufficient to represent the
+range of elements in the vector. Given this input vector, `PackedVec` stores
+each elements using exactly 7 bits, saving substantial memory. For vectors which
+often contain small ranges of numbers, and which are created rarely, but read
+from frequently, this can be a significant memory and performance win.
 
-The `struct` stores the elements of the original `vec` as a smaller collection
-of `u*` values. This is achieved by storing multiple elements inside a single
-`u*` value.
+# Examples
 
+`PackedVec` has two main API differences from `Vec`: a `PackedVec` is created
+from a `Vec`; and a `PackedVec` returns values rather than references. Both
+points can be seen in this example:
+
+```rust
+use packedvec::PackedVec;
+let v = vec![-1, 30, 120];
+let pv = PackedVec::new(v.clone());
+assert_eq!(pv.get(0), Some(-1));
+assert_eq!(pv.get(2), Some(120));
+assert_eq!(pv.get(3), None);
+assert_eq!(v.iter().cloned().collect::<Vec<_>>(), pv.iter().collect::<Vec<_>>());
 ```
-    use packedvec::PackedVec;
 
-    let v = vec![1, 4294967296, 2, 3, 4294967296, 5];
-    let mut small_vec = PackedVec::new(v);
-    assert_eq!(small_vec.get(1), 4294967296);
-    assert_eq!(small_vec.iter().next(), Some(1));
-```
