@@ -1,7 +1,7 @@
 [package]
 name = "packedvec"
-version = "0.1.0"
-authors = ["Gabriela Alexandra Moldovan <gabi_250@live.com>"]
+version = "1.0.0"
+authors = ["Gabriela Alexandra Moldovan <gabi_250@live.com>", "Laurence Tratt <http://tratt.net/laurie/>"]
 readme = "README.md"
 # This should be "Apache-2.0 OR MIT OR UPL-1.0" but crates.io doesn't know about
 # UPL-1.0.
