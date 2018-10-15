@@ -253,6 +253,11 @@ where
         self.idx += 1;
         self.packedvec.get(self.idx - 1)
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let ub = self.packedvec.len() - self.idx; // upper bound
+        (ub, Some(ub))
+    }
 }
 
 /// How many bits does this type represent?
