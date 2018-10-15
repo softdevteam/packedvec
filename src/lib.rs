@@ -227,6 +227,19 @@ where
         self.len
     }
 
+    /// How many bits does each packed element consume?
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use packedvec::PackedVec;
+    /// let packedvec = PackedVec::new(vec![1, 2, 3, 4]);
+    /// assert_eq!(packedvec.bwidth(), 2);
+    /// ```
+    pub fn bwidth(&self) -> usize {
+        self.bwidth
+    }
+
     /// Returns an iterator over the `PackedVec`.
     pub fn iter(&'a self) -> PackedVecIter<'a, T, StorageT> {
         PackedVecIter {
@@ -342,7 +355,7 @@ mod tests {
         let v: Vec<u16> = vec![];
         let packed_v = PackedVec::new(v);
         assert_eq!(packed_v.len(), 0);
-        assert_eq!(packed_v.bwidth, 0);
+        assert_eq!(packed_v.bwidth(), 0);
         assert_eq!(packed_v.bits, vec![]);
         let mut iter = packed_v.iter();
         assert_eq!(iter.idx, 0);
@@ -355,7 +368,7 @@ mod tests {
         let v_len = v.len();
         let packed_v = PackedVec::<u16, u64>::new_with_storaget(v.clone());
         assert_eq!(packed_v.len(), v_len);
-        assert_eq!(packed_v.bwidth, 2);
+        assert_eq!(packed_v.bwidth(), 2);
         assert_eq!(packed_v.bits, vec![3170534137668829184]);
         let mut iter = packed_v.iter();
         for number in v {
@@ -370,7 +383,7 @@ mod tests {
         let v_len = v.len();
         let packed_v = PackedVec::<u64, u64>::new_with_storaget(v.clone());
         assert_eq!(packed_v.len(), v_len);
-        assert_eq!(packed_v.bwidth, 33);
+        assert_eq!(packed_v.bwidth(), 33);
         assert_eq!(
             packed_v.bits,
             vec![
@@ -391,7 +404,7 @@ mod tests {
         let v_len = v.len();
         let packed_v = PackedVec::new(v.clone());
         assert_eq!(packed_v.len(), v_len);
-        assert_eq!(packed_v.bwidth, 64);
+        assert_eq!(packed_v.bwidth(), 64);
         assert_eq!(packed_v.bits, v);
         let mut iter = packed_v.iter();
         for number in v {
@@ -592,7 +605,7 @@ mod tests {
     #[test]
     fn efficient_range() {
         let pv = PackedVec::new(vec![9998, 9999, 10000]);
-        assert_eq!(pv.bwidth, 2);
+        assert_eq!(pv.bwidth(), 2);
         assert_eq!(pv.iter().collect::<Vec<_>>(), vec![9998, 9999, 10000]);
     }
 
