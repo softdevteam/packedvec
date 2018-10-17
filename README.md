@@ -1,3 +1,7 @@
+[![Build Status](https://api.travis-ci.org/softdevteam/packedvec.svg?branch=master)](https://travis-ci.org/softdevteam/packedvec)
+[![Latest version](https://img.shields.io/crates/v/packedvec.svg)](https://crates.io/crates/packedvec)
+[![Documentation](https://docs.rs/packedvec/badge.svg)](https://docs.rs/packedvec)
+
 # PackedVec
 
 A [`PackedVec`](https://docs.rs/packedvec/) stores vectors of integers
