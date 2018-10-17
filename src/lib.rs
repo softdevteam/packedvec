@@ -22,7 +22,12 @@ extern crate rand;
 extern crate serde;
 
 use num_traits::{cast::FromPrimitive, AsPrimitive, PrimInt, ToPrimitive, Unsigned};
-use std::{cmp::Ord, mem::size_of};
+use std::{
+    cmp::Ord,
+    fmt::Debug,
+    hash::{Hash, Hasher},
+    mem::size_of,
+};
 
 /// A [`PackedVec`](struct.PackedVec.html) stores vectors of integers efficiently while providing
 /// an API similar to `Vec`. The basic idea is to store each element using the minimum number of
@@ -245,6 +250,28 @@ where
         PackedVecIter {
             packedvec: self,
             idx: 0,
+        }
+    }
+}
+
+impl<T: PartialEq> PartialEq for PackedVec<T> {
+    fn eq(&self, other: &Self) -> bool {
+        if self.len != other.len || self.min != other.min || self.bwidth != other.bwidth {
+            return false;
+        }
+        self.bits
+            .iter()
+            .zip(other.bits.iter())
+            .all(|(b1, b2)| b1 == b2)
+    }
+}
+
+impl<T: Debug + PartialEq> Eq for PackedVec<T> {}
+
+impl<T: Debug + Hash> Hash for PackedVec<T> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        for blk in self.bits.iter() {
+            blk.hash(state);
         }
     }
 }
@@ -622,5 +649,17 @@ mod tests {
             pv.iter().collect::<Vec<_>>(),
             vec![i32::min_value(), i32::max_value()]
         );
+    }
+
+    #[test]
+    fn test_eq() {
+        assert_eq!(PackedVec::<u8>::new(vec![]), PackedVec::new(vec![]));
+        assert_eq!(PackedVec::new(vec![0]), PackedVec::new(vec![0]));
+        assert_eq!(PackedVec::new(vec![4, 10]), PackedVec::new(vec![4, 10]));
+        assert_eq!(
+            PackedVec::new(vec![u32::max_value(), u32::min_value()]),
+            PackedVec::new(vec![u32::max_value(), u32::min_value()])
+        );
+        assert_ne!(PackedVec::new(vec![1, 4]), PackedVec::new(vec![0, 3]));
     }
 }
