@@ -15,7 +15,6 @@
 //! struct.
 
 extern crate num_traits;
-extern crate rand;
 
 #[cfg(feature = "serde")]
 #[macro_use]
@@ -374,8 +373,9 @@ fn i_log2<T: PrimInt + Unsigned>(n: T) -> usize {
 
 #[cfg(test)]
 mod tests {
+    extern crate rand;
+    use self::rand::Rand;
     use super::*;
-    use rand::Rand;
 
     #[test]
     fn empty_vec() {
