@@ -182,38 +182,54 @@ where
         if index >= self.len {
             return None;
         }
+        // Since we've checked the bounds above, the call to get_unchecked is safe.
+        Some(unsafe { self.get_unchecked(index) })
+    }
+
+    /// Returns a reference to an element or subslice, without doing bounds checking.
+    ///
+    /// This is generally not recommended, use with caution! For a safe alternative see
+    /// [`get()`](#method.get).
+    ///
+    /// # Example
+    /// ```
+    /// use packedvec::PackedVec;
+    /// let v: Vec<u8> = vec![1, 2, 3, 4];
+    /// let packedvec = PackedVec::new(v);
+    /// assert_eq!(unsafe { packedvec.get_unchecked(3) }, 4);
+    /// ```
+    pub unsafe fn get_unchecked(&self, index: usize) -> T {
         let min = self.min;
         if self.bwidth == 0 {
             // The original vector consisted entirely of the same element.
-            return Some(min);
+            return min;
         }
-
         let item_index = (index * self.bwidth) / num_bits::<StorageT>();
         let start = (index * self.bwidth) % num_bits::<StorageT>();
         if start + self.bwidth < num_bits::<StorageT>() {
             let mask = ((StorageT::one() << self.bwidth) - StorageT::one())
                 << (num_bits::<StorageT>() - self.bwidth - start);
-            let item =
-                (self.bits[item_index] & mask) >> (num_bits::<StorageT>() - self.bwidth - start);
-            Some(inv_delta(min, item))
+            let item = (*self.bits.get_unchecked(item_index) & mask)
+                >> (num_bits::<StorageT>() - self.bwidth - start);
+            inv_delta(min, item)
         } else if self.bwidth == num_bits::<StorageT>() {
-            Some(inv_delta(min, self.bits[item_index]))
+            inv_delta(min, *self.bits.get_unchecked(item_index))
         } else {
             let bits_written = num_bits::<StorageT>() - start;
             let mask = ((StorageT::one() << bits_written) - StorageT::one())
                 << (num_bits::<StorageT>() - bits_written - start);
-            let first_half =
-                (self.bits[item_index] & mask) >> (num_bits::<StorageT>() - bits_written - start);
+            let first_half = (*self.bits.get_unchecked(item_index) & mask)
+                >> (num_bits::<StorageT>() - bits_written - start);
             // second half
             let remaining_bits = self.bwidth - bits_written;
             if remaining_bits > 0 {
                 let mask = ((StorageT::one() << remaining_bits) - StorageT::one())
                     << (num_bits::<StorageT>() - remaining_bits);
-                let second_half =
-                    (self.bits[item_index + 1] & mask) >> (num_bits::<StorageT>() - remaining_bits);
-                Some(inv_delta(min, (first_half << remaining_bits) + second_half))
+                let second_half = (*self.bits.get_unchecked(item_index + 1) & mask)
+                    >> (num_bits::<StorageT>() - remaining_bits);
+                inv_delta(min, (first_half << remaining_bits) + second_half)
             } else {
-                Some(inv_delta(min, first_half))
+                inv_delta(min, first_half)
             }
         }
     }
