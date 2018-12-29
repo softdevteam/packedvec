@@ -2,7 +2,7 @@
 name = "packedvec"
 description = "Store vectors of integers efficiently"
 repository = "https://github.com/softdevteam/packedvec/"
-version = "1.1.0"
+version = "1.2.0"
 authors = ["Gabriela Alexandra Moldovan <gabi_250@live.com>", "Laurence Tratt <http://tratt.net/laurie/>"]
 readme = "README.md"
 # This should be "Apache-2.0 OR MIT OR UPL-1.0" but crates.io doesn't know about
