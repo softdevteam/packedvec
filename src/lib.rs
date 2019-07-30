@@ -234,6 +234,22 @@ where
         }
     }
 
+    /// Returns true if the `PackedVec` has no elements.
+    ///
+    /// # Example
+    /// ```
+    /// use packedvec::PackedVec;
+    /// let v: Vec<u16> = vec![];
+    /// let packedvec = PackedVec::new(v);
+    /// assert_eq!(packedvec.is_empty(), true);
+    /// let v: Vec<u16> = vec![1, 2, 3, 4];
+    /// let packedvec = PackedVec::new(v);
+    /// assert_eq!(packedvec.is_empty(), false);
+    /// ```
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
+    }
+
     /// Return the number of elements in this `PackedVec`.
     ///
     /// # Example
