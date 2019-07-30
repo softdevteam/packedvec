@@ -131,7 +131,7 @@ where
         for &e in &vec {
             let e = delta(min, e);
             if bit_count + bwidth < num_bits::<StorageT>() {
-                let shifted_e = e << num_bits::<StorageT>() - (bwidth + bit_count);
+                let shifted_e = e << (num_bits::<StorageT>() - (bwidth + bit_count));
                 buf = buf | shifted_e;
                 bit_count += bwidth;
             } else {
@@ -151,7 +151,7 @@ where
                     let mut second_half = e & mask;
                     bit_count += bwidth - remaining_bits;
                     // add the second half of the number to the buffer
-                    second_half = second_half << num_bits::<StorageT>() - bit_count;
+                    second_half = second_half << (num_bits::<StorageT>() - bit_count);
                     buf = buf | second_half;
                 }
             }
