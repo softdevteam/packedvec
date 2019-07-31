@@ -1,3 +1,8 @@
+# packedvec 1.2.1 (2019-07-31)
+
+* Add `is_empty` function to better match expectations from `Vec`.
+
+
 # packedvec 1.2.0 (2018-12-29)
 
 * Add an unsafe `get_unchecked` function. In the best case (a linear scan
