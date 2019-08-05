@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Garbiela Alexandra Moldovan
+// Copyright (c) 2017 Gabriela Alexandra Moldovan
 // Copyright (c) 2018 King's College London created by the Software Development Team
 // <http://soft-dev.org/>
 //
