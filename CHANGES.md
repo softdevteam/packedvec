@@ -1,3 +1,9 @@
+# packedvec 1.2.2 (2019-11-21)
+
+* License as dual Apache-2.0/MIT (instead of a more complex, and little
+  understood, triple license of Apache-2.0/MIT/UPL-1.0).
+
+
 # packedvec 1.2.1 (2019-07-31)
 
 * Add `is_empty` function to better match expectations from `Vec`.
