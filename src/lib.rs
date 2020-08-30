@@ -181,6 +181,11 @@ where
     /// This is generally not recommended, use with caution! For a safe alternative see
     /// [`get()`](#method.get).
     ///
+    /// # Safety
+    ///
+    /// The caller must ensure that the index specified does not exceed this
+    /// `PackedVec`'s bound.
+    ///
     /// # Example
     /// ```
     /// use packedvec::PackedVec;
