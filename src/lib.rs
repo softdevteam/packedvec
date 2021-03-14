@@ -49,7 +49,7 @@ use std::{
 /// constructor. In general we recommend using the default `usize` backing storage unless you have
 /// rigorously benchmarked your particular use case and are sure that a different storage type is
 /// superior.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct PackedVec<T, StorageT = usize> {
     len: usize,
