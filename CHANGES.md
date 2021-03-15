@@ -1,3 +1,8 @@
+# packedvec 1.2.3 (2021-03-15)
+
+* `PackedVec` now implements `Clone`.
+
+
 # packedvec 1.2.2 (2019-11-21)
 
 * License as dual Apache-2.0/MIT (instead of a more complex, and little
