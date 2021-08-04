@@ -2,7 +2,7 @@
 name = "packedvec"
 description = "Store vectors of integers efficiently"
 repository = "https://github.com/softdevteam/packedvec/"
-version = "1.2.3"
+version = "1.2.4"
 authors = ["Gabriela Alexandra Moldovan <gabi_250@live.com>", "Laurence Tratt <http://tratt.net/laurie/>"]
 readme = "README.md"
 license = "Apache-2.0/MIT"

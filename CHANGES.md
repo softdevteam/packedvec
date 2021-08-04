@@ -1,3 +1,8 @@
+# packedvec 1.2.4 (2021-08-04)
+
+* Fix bug where a negative minimum value could lead to integer overflow.
+
+
 # packedvec 1.2.3 (2021-03-15)
 
 * `PackedVec` now implements `Clone`.
