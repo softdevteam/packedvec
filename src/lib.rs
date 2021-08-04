@@ -365,7 +365,7 @@ where
     if min >= T::zero() {
         (max - min).as_()
     } else if min < T::zero() && max < T::zero() {
-        abs(max) - abs(min)
+        abs(max - min)
     } else {
         debug_assert!(min < T::zero());
         max.as_() + abs(min)
@@ -611,6 +611,7 @@ mod tests {
         assert_eq!(delta::<u8, u8>(0, u8::max_value()), u8::max_value());
         assert_eq!(delta::<i8, u8>(-2, 0), 2);
         assert_eq!(delta::<i8, u8>(-2, 2), 4);
+        assert_eq!(delta::<i8, u8>(-2, -1), 1);
         assert_eq!(delta::<i8, u8>(i8::min_value(), 0), 128);
         assert_eq!(delta::<i8, u8>(0, i8::max_value()), 127);
         assert_eq!(
@@ -636,6 +637,7 @@ mod tests {
         assert_eq!(inv_delta::<u8, u8>(0, u8::max_value()), u8::max_value());
         assert_eq!(inv_delta::<i8, u8>(-2, 2), 0);
         assert_eq!(inv_delta::<i8, u8>(-2, 4), 2);
+        assert_eq!(inv_delta::<i8, u8>(-2, 1), -1);
         assert_eq!(inv_delta::<i8, u8>(i8::min_value(), 128), 0);
         assert_eq!(inv_delta::<i8, u8>(0, 127), i8::max_value());
         assert_eq!(
@@ -676,6 +678,9 @@ mod tests {
             pv.iter().collect::<Vec<_>>(),
             vec![i32::min_value(), i32::max_value()]
         );
+
+        let pv = PackedVec::new(vec![-2, -1, 0]);
+        assert_eq!(pv.iter().collect::<Vec<_>>(), vec![-2, -1, 0]);
     }
 
     #[test]
