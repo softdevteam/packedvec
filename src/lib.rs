@@ -365,7 +365,7 @@ where
     if min >= T::zero() {
         (max - min).as_()
     } else if min < T::zero() && max < T::zero() {
-        abs(max) - abs(min)
+        abs(max - min)
     } else {
         debug_assert!(min < T::zero());
         max.as_() + abs(min)
