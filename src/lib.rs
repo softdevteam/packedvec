@@ -58,7 +58,7 @@ pub struct PackedVec<T, StorageT = usize> {
     min: T,
 }
 
-impl<'a, T> PackedVec<T, usize>
+impl<T> PackedVec<T, usize>
 where
     T: 'static + AsPrimitive<usize> + FromPrimitive + Ord + PrimInt + ToPrimitive,
     usize: AsPrimitive<T>,
@@ -308,7 +308,7 @@ pub struct PackedVecIter<'a, T: 'a, StorageT: 'a> {
     idx: usize,
 }
 
-impl<'a, T, StorageT> Iterator for PackedVecIter<'a, T, StorageT>
+impl<T, StorageT> Iterator for PackedVecIter<'_, T, StorageT>
 where
     T: 'static + AsPrimitive<StorageT> + FromPrimitive + Ord + PrimInt + ToPrimitive,
     StorageT: AsPrimitive<T> + PrimInt + Unsigned,
