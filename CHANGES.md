@@ -1,3 +1,9 @@
+# packedvec 1.2.5 (2025-03-17)
+
+* Add an optional bincode dependency, which can be used as an alternative to
+  serde for encoding / decoding.
+
+
 # packedvec 1.2.4 (2021-08-04)
 
 * Fix bug where a negative minimum value could lead to integer overflow.
