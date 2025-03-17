@@ -581,12 +581,9 @@ mod tests {
         assert_eq!(pv.get(2), None);
         assert_eq!(pv.iter().collect::<Vec<u16>>(), vec![0, 0]);
 
-        let pv = PackedVec::new(vec![u16::max_value(), u16::max_value()]);
+        let pv = PackedVec::new(vec![u16::MAX, u16::MAX]);
         assert_eq!(pv.bits.len(), 0);
-        assert_eq!(
-            pv.iter().collect::<Vec<u16>>(),
-            vec![u16::max_value(), u16::max_value()]
-        );
+        assert_eq!(pv.iter().collect::<Vec<u16>>(), vec![u16::MAX, u16::MAX]);
     }
 
     #[test]
@@ -608,24 +605,21 @@ mod tests {
         // The trickiness here almost entirely relates to negative maximum values for signed
         // integer types
         assert_eq!(delta::<u8, u8>(0, 2), 2);
-        assert_eq!(delta::<u8, u8>(0, u8::max_value()), u8::max_value());
+        assert_eq!(delta::<u8, u8>(0, u8::MAX), u8::MAX);
         assert_eq!(delta::<i8, u8>(-2, 0), 2);
         assert_eq!(delta::<i8, u8>(-2, 2), 4);
         assert_eq!(delta::<i8, u8>(-2, -1), 1);
-        assert_eq!(delta::<i8, u8>(i8::min_value(), 0), 128);
-        assert_eq!(delta::<i8, u8>(0, i8::max_value()), 127);
+        assert_eq!(delta::<i8, u8>(i8::MIN, 0), 128);
+        assert_eq!(delta::<i8, u8>(0, i8::MAX), 127);
+        assert_eq!(delta::<i8, u8>(i8::MIN, i8::MAX), u8::MAX);
+        assert_eq!(delta::<i8, u8>(i8::MIN, i8::MIN), 0);
         assert_eq!(
-            delta::<i8, u8>(i8::min_value(), i8::max_value()),
-            u8::max_value()
-        );
-        assert_eq!(delta::<i8, u8>(i8::min_value(), i8::min_value()), 0);
-        assert_eq!(
-            delta::<i32, u32>(i32::min_value(), i32::max_value()),
-            (i32::max_value() as u32) * 2 + 1
+            delta::<i32, u32>(i32::MIN, i32::MAX),
+            (i32::MAX as u32) * 2 + 1
         );
         assert_eq!(
-            delta::<i32, usize>(i32::min_value(), i32::max_value()),
-            (i32::max_value() as usize) * 2 + 1
+            delta::<i32, usize>(i32::MIN, i32::MAX),
+            (i32::MAX as usize) * 2 + 1
         );
     }
 
@@ -634,27 +628,21 @@ mod tests {
         // These tests are, in essence, those from delta with the last two values swapped (i.e.
         // assert_eq!(delta(x, y), z) becomes assert_eq!(inv_delta(x, z), y).
         assert_eq!(inv_delta::<u8, u8>(0, 2), 2);
-        assert_eq!(inv_delta::<u8, u8>(0, u8::max_value()), u8::max_value());
+        assert_eq!(inv_delta::<u8, u8>(0, u8::MAX), u8::MAX);
         assert_eq!(inv_delta::<i8, u8>(-2, 2), 0);
         assert_eq!(inv_delta::<i8, u8>(-2, 4), 2);
         assert_eq!(inv_delta::<i8, u8>(-2, 1), -1);
-        assert_eq!(inv_delta::<i8, u8>(i8::min_value(), 128), 0);
-        assert_eq!(inv_delta::<i8, u8>(0, 127), i8::max_value());
+        assert_eq!(inv_delta::<i8, u8>(i8::MIN, 128), 0);
+        assert_eq!(inv_delta::<i8, u8>(0, 127), i8::MAX);
+        assert_eq!(inv_delta::<i8, u8>(i8::MIN, u8::MAX), i8::MAX);
+        assert_eq!(inv_delta::<i8, u8>(i8::MIN, 0), i8::MIN);
         assert_eq!(
-            inv_delta::<i8, u8>(i8::min_value(), u8::max_value()),
-            i8::max_value()
-        );
-        assert_eq!(inv_delta::<i8, u8>(i8::min_value(), 0), i8::min_value());
-        assert_eq!(
-            inv_delta::<i32, u32>(i32::min_value(), ((i32::max_value() as u32) * 2 + 1).as_()),
-            i32::max_value()
+            inv_delta::<i32, u32>(i32::MIN, ((i32::MAX as u32) * 2 + 1).as_()),
+            i32::MAX
         );
         assert_eq!(
-            inv_delta::<i32, usize>(
-                i32::min_value(),
-                ((i32::max_value() as usize) * 2 + 1).as_()
-            ),
-            i32::max_value()
+            inv_delta::<i32, usize>(i32::MIN, ((i32::MAX as usize) * 2 + 1).as_()),
+            i32::MAX
         );
     }
 
@@ -670,14 +658,11 @@ mod tests {
         let pv = PackedVec::new(vec![-1, 1]);
         assert_eq!(pv.iter().collect::<Vec<_>>(), vec![-1, 1]);
 
-        let pv = PackedVec::new(vec![i32::min_value(), 1]);
-        assert_eq!(pv.iter().collect::<Vec<_>>(), vec![i32::min_value(), 1]);
+        let pv = PackedVec::new(vec![i32::MIN, 1]);
+        assert_eq!(pv.iter().collect::<Vec<_>>(), vec![i32::MIN, 1]);
 
-        let pv = PackedVec::<i32, u32>::new_with_storaget(vec![i32::min_value(), i32::max_value()]);
-        assert_eq!(
-            pv.iter().collect::<Vec<_>>(),
-            vec![i32::min_value(), i32::max_value()]
-        );
+        let pv = PackedVec::<i32, u32>::new_with_storaget(vec![i32::MIN, i32::MAX]);
+        assert_eq!(pv.iter().collect::<Vec<_>>(), vec![i32::MIN, i32::MAX]);
 
         let pv = PackedVec::new(vec![-2, -1, 0]);
         assert_eq!(pv.iter().collect::<Vec<_>>(), vec![-2, -1, 0]);
@@ -689,8 +674,8 @@ mod tests {
         assert_eq!(PackedVec::new(vec![0]), PackedVec::new(vec![0]));
         assert_eq!(PackedVec::new(vec![4, 10]), PackedVec::new(vec![4, 10]));
         assert_eq!(
-            PackedVec::new(vec![u32::max_value(), u32::min_value()]),
-            PackedVec::new(vec![u32::max_value(), u32::min_value()])
+            PackedVec::new(vec![u32::MAX, u32::MIN]),
+            PackedVec::new(vec![u32::MAX, u32::MIN])
         );
         assert_ne!(PackedVec::new(vec![1, 4]), PackedVec::new(vec![0, 3]));
     }
